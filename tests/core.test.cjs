@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict');const C=require('../core.js');const rooms=[{id:'MTR2'},{id:'AB2-003'}];const base={title:'วิชาทดสอบ',room:'MTR2',date:'2026-11-02',start:'09:00',end:'10:00',status:'approved'};
+assert.equal(C.overlap(base,{...base,start:'09:30',end:'11:00'}),true);
+assert.equal(C.overlap(base,{...base,start:'10:00',end:'11:00'}),false);
+assert.equal(C.overlap(base,{...base,room:'AB2-003'}),false);
+assert.equal(C.overlap(base,{...base,status:'cancelled'}),false);
+assert.equal(C.validDate('2026-02-30'),false);assert.equal(C.validDate('2028-02-29'),true);
+assert.throws(()=>C.validate({...base,start:'11:00'},rooms));assert.throws(()=>C.validate({...base,end:'19:00'},rooms));
+const row={title:'ทดสอบ',room:'MTR2',day:'จันทร์',start:'09:00',end:'12:00'};const opts={term:'2/2569',start:'2026-11-01',end:'2026-11-30',exceptions:['2026-11-09']};const events=C.expand([row],opts,rooms);assert.equal(events.length,4);assert.equal(events.some(e=>e.date==='2026-11-09'),false);assert.equal(events[0].date,'2026-11-02');
+assert.equal(C.conflicts(events,[base]).length,1);assert.equal(C.conflicts([...events,...events],[]).length,4);assert.throws(()=>C.expand([{...row,day:'ผิด'}],opts,rooms));assert.throws(()=>C.expand([{...row,room:'unknown'}],opts,rooms));assert.throws(()=>C.expand([row],{...opts,end:'2028-11-01'},rooms));assert.throws(()=>C.expand([row],{...opts,exceptions:['2026-13-01']},rooms));
+console.log('ผ่านการทดสอบเวลา ช่วงทับซ้อน ห้องต่างกัน การยกเลิก วันหยุด คาบซ้ำ และข้อมูลผิด 17 กรณี');
+const a={...base,id:'a'}, b={...base,id:'b',room:'AB2-003'},c={...base,id:'c',start:'10:00',end:'11:00'};
+let layout=C.layoutEvents([a,b,c]);assert.equal(layout.find(x=>x.event.id==='a').columns,2);assert.notEqual(layout.find(x=>x.event.id==='a').lane,layout.find(x=>x.event.id==='b').lane);assert.equal(layout.find(x=>x.event.id==='c').columns,1);
+layout=C.layoutEvents([a,{...b,start:'09:30',end:'10:30'},{...c,start:'10:00',end:'11:00'}]);assert.deepEqual(layout.map(x=>x.columns),[2,2,2]);assert.equal(layout[0].lane,layout[2].lane);
+assert.equal(C.layoutEvents([{...a,status:'cancelled'}]).length,0);assert.deepEqual(C.layoutEvents([a,{...b,date:'2026-11-03'}]).map(x=>x.columns),[1,1]);
+console.log('ผ่านการทดสอบการแสดงห้องที่เวลาซ้อนกัน เคียงกัน การคืนช่อง และวันต่างกัน');
