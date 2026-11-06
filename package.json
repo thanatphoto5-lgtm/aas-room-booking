@@ -1,13 +1,17 @@
 {
   "name": "aas-cmu-room-booking",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "AAS CMU room booking prototype for GitHub and Netlify",
   "scripts": {
-    "build": "node --check app.js && node --check core.js && node tests/core.test.cjs",
-    "test": "node tests/core.test.cjs"
+    "check": "node --check app.js && node --check auth.js && node --check login.js && node tests/core.test.cjs && node tests/auth.test.cjs",
+    "build": "npm run check && node scripts/build.cjs",
+    "test": "npm run check",
+    "test:database": "node tests/database.mjs"
   },
   "engines": {
     "node": ">=22"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.13"
   }
 }
