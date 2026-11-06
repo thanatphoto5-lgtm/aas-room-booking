@@ -1,3 +1,10 @@
+# รุ่นจองทั่วไปโดยไม่กรอกรหัสผ่าน
+1. Supabase → Authentication → Sign In / Providers เปิด Allow new users to sign up และ Allow anonymous sign-ins เพื่อสร้างตัวตนชั่วคราวสำหรับแยกเจ้าของคำขอ ผู้จองทั่วไปไม่ต้องกรอกอีเมลหรือรหัสผ่าน
+2. หากติดตั้งฐานข้อมูลเดิมแล้ว ให้รัน database/002_guest_booking.sql ใน SQL Editor ครั้งเดียว สำหรับโครงการใหม่ให้รัน 001_schema.sql เท่านั้น
+3. อัปโหลดไฟล์ในชุดนี้ไป GitHub เดิมและ deploy ที่ Netlify ใช้ค่าฐานข้อมูลเดิม
+4. เปิดหน้าหลักเพื่อจอง เจ้าหน้าที่เปิด /staff.html ต้องใช้บัญชีที่กำหนดสิทธิ์ไว้ ผู้จองทั่วไปติดตามได้ในแท็บเดิม หากปิดแท็บหรือล้างข้อมูลให้ติดต่อเจ้าหน้าที่
+5. ทดสอบการจองจากเบราว์เซอร์ใหม่ และอนุมัติจากอีกเครื่องก่อนเปิดใช้งาน
+
 # AAS CMU ระบบจองห้อง รุ่น 2.0
 
 เวอร์ชันเชื่อมฐานข้อมูล Supabase สำหรับเว็บไซต์ Netlify เดิม แยก /borrower.html และ /staff.html ไม่มีปุ่มเลือกสิทธิ์เอง ไม่ใช้ข้อมูลการจองจาก localStorage
@@ -13,7 +20,7 @@
   `update booking_private.rooms set capacity = จำนวนจริง where id = 'MTR2';`
 
 ## 2. การเข้าสู่ระบบและบัญชีผู้ใช้
-- เปิด Email/password authentication ใน Supabase ปิดการสมัครบัญชีเอง (Allow new users to sign up) เนื่องจากระบบนี้ใช้บัญชีที่หน่วยงานอนุญาต
+- เปิด Email/password authentication ใน Supabase เปิดการสมัครตามขั้นตอนสำหรับผู้จองทั่วไปด้านบน
 - ตั้งรหัสผ่านขั้นต่ำ 12 ตัวอักษรใน Supabase ให้สอดคล้องกับแบบฟอร์ม
 - Authentication → URL Configuration: Site URL เป็น URL Netlify จริง และ Redirect URLs เพิ่ม `https://ชื่อเว็บ.netlify.app/login.html` แบบเจาะจง ไม่ใช้ wildcard กว้าง
 - ตั้งค่า Custom SMTP ของหน่วยงานและทดสอบส่งอีเมลก่อนเปิดใช้จริง อีเมลเชิญ/กู้รหัสผ่านต้องพึ่งบริการอีเมลของ Supabase ที่ตั้งค่าไว้

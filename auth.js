@@ -17,7 +17,7 @@ window.AAS = (() => {
    await refreshing;
   }return session.access_token;
  }
- return {configured,hasSession:()=>!!session,
+ return {configured,guest:async()=>{const result=await request('/auth/v1/signup',{data:{}});if(!result.access_token)throw Error('เปิดการจองทั่วไปใน Supabase ก่อน');keep(result)},hasSession:()=>!!session,
   login:async(email,password)=>keep(await request('/auth/v1/token?grant_type=password',{email,password})),
   logout:async()=>{try{if(session)await request('/auth/v1/logout',{},await access())}finally{keep(null);location.replace('/login.html')}},
   rpc:async(action,data={})=>request('/rest/v1/rpc/booking_api',{p_action:action,p_data:data},await access()),
