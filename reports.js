@@ -28,7 +28,7 @@ async function load(){
  if(busy)return;busy=true;
  try{
   const state=await AAS.rpc('state');
-  if(!state.me.staff)throw Error('เฉพาะบัญชีเจ้าหน้าที่');
+  if(!state.me.staff){location.replace('/login.html?next='+(monitor?'monitor':'daily'));throw Error('กรุณาใส่รหัสผ่านเจ้าหน้าที่')}
   rooms=state.rooms;
   events=state.events.map(({date,room,title,start,end,type,status})=>({date,room,title,start,end,type,status}));
   const selected=byId('room').value;
@@ -37,8 +37,7 @@ async function load(){
   byId('screen').hidden=false;byId('message').textContent='อัปเดตล่าสุด '+clock.format(new Date())+' น.';draw();
  }catch(error){events=[];byId('items').replaceChildren();byId('screen').hidden=true;byId('message').textContent='แสดงข้อมูลไม่ได้ · '+error.message}finally{busy=false}
 }
-if(!AAS.hasSession())location.replace('/login.html?next='+ (monitor?'monitor':'daily'));
-else{
+{
  if(!monitor)byId('day').value=day;
  byId('filters').onsubmit=e=>{e.preventDefault();room=byId('room').value;day=monitor?today():byId('day').value;slide=0;draw();load()};
  byId('action').onclick=async()=>{if(!monitor)return window.print();try{await document.documentElement.requestFullscreen()}catch{byId('message').textContent='ใช้ปุ่ม F11 ของเบราว์เซอร์เพื่อแสดงเต็มจอ'}};

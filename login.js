@@ -1,6 +1,19 @@
 'use strict';
-const form=document.querySelector('#loginForm'),msg=document.querySelector('#loginMessage');let setting=false;
-try{const type=AAS.consumeLink();setting=type==='recovery'||type==='invite';if(setting){document.querySelector('#loginTitle').textContent='ตั้งรหัสผ่านของคุณ';document.querySelector('#loginSubmit').textContent='บันทึกรหัสผ่าน';document.querySelector('#emailLabel').hidden=true;form.elements.email.required=false;form.elements.password.autocomplete='new-password';document.querySelector('#forgot').hidden=true}}catch(e){msg.textContent=e.message}
-if(!AAS.configured()){msg.textContent='ระบบยังไม่ได้เชื่อมฐานข้อมูล กรุณาติดต่อผู้ดูแลเพื่อตั้งค่า Supabase';form.querySelector('button').disabled=true;document.querySelector('#forgot').disabled=true}
-form.onsubmit=async e=>{e.preventDefault();const b=form.querySelector('button');b.disabled=true;msg.textContent='กำลังตรวจสอบ…';try{if(setting){await AAS.updatePassword(form.elements.password.value);form.reset();await AAS.logout();return}await AAS.login(form.elements.email.value.trim(),form.elements.password.value);form.elements.password.value='';const s=await AAS.rpc('state');const target=new URLSearchParams(location.search).get('next');if(['daily','monitor','staff'].includes(target)&&!s.me.staff)throw Error('บัญชีนี้ไม่มีสิทธิ์เจ้าหน้าที่');location.replace(['daily','monitor'].includes(target)?'/'+target+'.html':s.me.staff?'/staff.html':'/borrower.html')}catch(e){msg.textContent=e.message}finally{b.disabled=false}};
-document.querySelector('#forgot').onclick=async()=>{if(!form.elements.email.reportValidity())return;const b=document.querySelector('#forgot');b.disabled=true;try{await AAS.recover(form.elements.email.value.trim());msg.textContent='หากอีเมลนี้มีบัญชี ระบบจะส่งลิงก์ตั้งรหัสผ่านให้ กรุณาตรวจสอบอีเมล'}catch(e){msg.textContent=e.message}finally{b.disabled=false}};
+const form = document.querySelector('#loginForm');
+const message = document.querySelector('#loginMessage');
+form.onsubmit = async event => {
+  event.preventDefault();
+  const button = document.querySelector('#loginSubmit');
+  button.disabled = true;
+  message.textContent = 'กำลังตรวจสอบรหัสผ่าน…';
+  try {
+    await AAS.login(form.elements.password.value);
+    form.reset();
+    const next = new URLSearchParams(location.search).get('next');
+    location.replace(['daily', 'monitor'].includes(next) ? '/' + next + '.html' : '/staff.html');
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    button.disabled = false;
+  }
+};

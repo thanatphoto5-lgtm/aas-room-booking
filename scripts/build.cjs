@@ -1,10 +1,17 @@
-const fs=require('node:fs'),path=require('node:path');
-const url=(process.env.SUPABASE_URL||'').replace(/\/$/,''),key=process.env.SUPABASE_PUBLISHABLE_KEY||'';
-if(!/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url)||!key)throw Error('Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in Netlify environment variables');
-if(key.startsWith('sb_secret_'))throw Error('Secret key cannot be used in a website');
-if(key.startsWith('eyJ')){let payload;try{payload=JSON.parse(Buffer.from(key.split('.')[1],'base64url'))}catch{throw Error('Invalid API key')}if(payload.role!=='anon')throw Error('Only anon or publishable key is permitted');}else if(!key.startsWith('sb_publishable_'))throw Error('Use a Supabase publishable key');
-fs.rmSync('dist',{recursive:true,force:true});fs.mkdirSync('dist');
-for(const f of ['daily.html','monitor.html','reports.js','reports.css','index.html','login.html','borrower.html','staff.html','login.js','auth.js','app.js','core.js','style.css','AAS_Schedule_Template.xlsx','assets','vendor'])fs.cpSync(f,path.join('dist',f),{recursive:true});
-fs.writeFileSync('dist/config.js','window.AAS_CONFIG = '+JSON.stringify({supabaseUrl:url,publishableKey:key})+';\n');
-fs.writeFileSync('dist/_headers',`/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  X-Frame-Options: DENY\n  Permissions-Policy: camera=(), microphone=(), geolocation=()\n  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ${url}; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'\n/config.js\n  Cache-Control: no-store\n/*.html\n  Cache-Control: no-cache\n`);
-console.log('Built production static files in dist/; no private keys or SQL included.');
+const fs = require('node:fs');
+const path = require('node:path');
+fs.rmSync('dist', {recursive: true, force: true});
+fs.mkdirSync('dist');
+const files = ['daily.html', 'monitor.html', 'reports.js', 'reports.css', 'login.html', 'borrower.html', 'staff.html', 'login.js', 'auth.js', 'app.js', 'core.js', 'style.css', 'AAS_Schedule_Template.xlsx', 'assets', 'vendor'];
+for (const file of files) fs.cpSync(file, path.join('dist', file), {recursive: true});
+// Serve the full booking screen directly at the root URL.
+fs.copyFileSync('borrower.html', 'dist/index.html');
+fs.writeFileSync('dist/_headers', `/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'
+  Cache-Control: no-cache
+`);
+console.log('Built Netlify app in dist. Staff password is read only by the server.');

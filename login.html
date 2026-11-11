@@ -1,1 +1,26 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>เข้าสู่ระบบ · AAS CMU</title><link rel="stylesheet" href="style.css"><script src="config.js" defer></script><script src="auth.js" defer></script><script src="login.js" defer></script></head><body class="login-page"><main class="login-shell"><img class="login-logo" src="assets/aas-cmu-logo.png" alt="AAS CMU ภาควิชาสัตวศาสตร์และสัตว์น้ำ"><div class="card login-card"><div class="eyebrow">ROOM BOOKING · AAS CMU</div><h1 id="loginTitle">เข้าสู่ระบบจองห้อง</h1><p id="loginIntro" class="muted">ใช้บัญชีที่ได้รับอนุญาตจากภาควิชาฯ</p><a class="secondary full" href="/borrower.html">จองห้องโดยไม่ต้องเข้าสู่ระบบ</a><form id="loginForm"><label id="emailLabel">อีเมล<input name="email" type="email" autocomplete="username" required></label><label>รหัสผ่าน<input name="password" type="password" autocomplete="current-password" required minlength="12"></label><button class="primary full" id="loginSubmit">เข้าสู่ระบบ</button></form><button class="secondary full" id="forgot">ลืมรหัสผ่าน</button><p id="loginMessage" role="status"></p><p class="small muted">ผู้จองและเจ้าหน้าที่ใช้คนละหน้า ระบบตรวจสิทธิ์จากบัญชีผู้ใช้<br>ยังไม่มีบัญชี? ติดต่อเจ้าหน้าที่ภาควิชาฯ เพื่อขอสิทธิ์</p><a href="/staff.html">เข้าสู่หน้าเจ้าหน้าที่ →</a></div><p class="small muted">ภาควิชาสัตวศาสตร์และสัตว์น้ำ · คณะเกษตรศาสตร์ · มหาวิทยาลัยเชียงใหม่</p></main></body></html>
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>เข้าสู่ระบบเจ้าหน้าที่ · AAS CMU</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="auth.js" defer></script><script src="login.js" defer></script>
+</head>
+<body class="login-page">
+  <main class="login-shell">
+    <img class="login-logo" src="assets/aas-cmu-logo.png" alt="AAS CMU ภาควิชาสัตวศาสตร์และสัตว์น้ำ">
+    <div class="card login-card">
+      <div class="eyebrow">STAFF · AAS CMU</div>
+      <h1>เข้าสู่ระบบเจ้าหน้าที่</h1>
+      <p class="muted">กรอกรหัสผ่านเจ้าหน้าที่เพื่อจัดการคำขอและตารางห้อง</p>
+      <form id="loginForm">
+        <label>รหัสผ่านเจ้าหน้าที่<input name="password" type="password" autocomplete="current-password" required autofocus></label>
+        <button class="primary full" id="loginSubmit">เข้าสู่ระบบ</button>
+      </form>
+      <p id="loginMessage" role="status"></p>
+      <a class="secondary full" href="/borrower.html">กลับหน้าจองห้อง</a>
+      <p class="small muted">หากลืมรหัสผ่าน กรุณาติดต่อผู้ดูแลระบบของภาควิชาฯ</p>
+    </div>
+  </main>
+</body>
+</html>
