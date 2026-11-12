@@ -14,7 +14,7 @@ function verify(token, secret, password, now) {
     const [body, signature] = token.split('.');
     if (!equal(signature || '', createHmac('sha256', secret).update(body).digest('base64url'))) return null;
     const user = JSON.parse(Buffer.from(body, 'base64url'));
-    if (user.expires <= now || typeof user.id !== 'string' || typeof user.staff !== 'boolean') return null;
+    if (!Number.isFinite(user.expires) || user.expires <= now || typeof user.id !== 'string' || typeof user.staff !== 'boolean') return null;
     if (user.staff && !equal(user.version || '', createHmac('sha256', secret).update(password).digest('hex'))) return null;
     return user;
   } catch { return null; }
@@ -59,6 +59,8 @@ export function createHandler(getStore, env = process.env) {
       const now = Date.now();
       const token = (request.headers.get('cookie') || '').split(';').map(s => s.trim()).find(s => s.startsWith(cookieName + '='))?.slice(cookieName.length + 1) || '';
       let user = verify(token, secret, password, now);
+      // Consult persistent revocations for every request, including legacy cookies.
+      if (user && await store.get('revoked-' + user.id, {type: 'json', consistency: 'strong'})) user = null;
       const setSession = (staff) => {
         const seconds = staff ? 8 * 3600 : 30 * 86400;
         user = {id: randomUUID(), staff, expires: now + seconds * 1000};
@@ -69,10 +71,13 @@ export function createHandler(getStore, env = process.env) {
       if (action === 'login') {
         await limit(store, ip, 'login', 10, now);
         if (typeof data.password !== 'string' || data.password.length > 1024 || !equal(data.password, password)) throw error('รหัสผ่านไม่ถูกต้อง', 401);
+        if (user) await store.setJSON('revoked-' + user.id, {expires: user.expires});
         setSession(true);
         return reply({ok: true, staff: true});
       }
       if (action === 'logout') {
+        // Clear the browser cookie only after server-side revocation succeeds.
+        if (user) await store.setJSON('revoked-' + user.id, {expires: user.expires});
         headers['Set-Cookie'] = `${cookieName}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`;
         return reply({ok: true});
       }

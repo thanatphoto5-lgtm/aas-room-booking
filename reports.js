@@ -29,7 +29,7 @@ async function load(){
  try{
   const state=await AAS.rpc('state');
   if(!state.me.staff){location.replace('/login.html?next='+(monitor?'monitor':'daily'));throw Error('กรุณาใส่รหัสผ่านเจ้าหน้าที่')}
-  rooms=state.rooms;
+  rooms=[...state.rooms,...(state.archivedRooms||[])];
   events=state.events.map(({date,room,title,start,end,type,status})=>({date,room,title,start,end,type,status}));
   const selected=byId('room').value;
   byId('room').replaceChildren(new Option('ทุกห้อง',''),...rooms.map(r=>new Option(r.name,r.id)));

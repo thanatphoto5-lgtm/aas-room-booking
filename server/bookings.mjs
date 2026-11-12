@@ -26,7 +26,8 @@ function noConflict(event, events) {
 export function visibleState(state, user) {
   return {
     me: {id: user.id, name: user.staff ? 'เจ้าหน้าที่' : 'ผู้จองทั่วไป', staff: user.staff, guest: !user.staff},
-    rooms: state.rooms,
+    rooms: state.rooms.filter(r => !r.archived),
+    archivedRooms: state.rooms.filter(r => r.archived).map(({id, name}) => ({id, name})),
     events: state.events.filter(e => user.staff || e.ownerId === user.id || e.status !== 'cancelled').map(e => {
       if (user.staff || e.ownerId === user.id) return e;
       const {id, room, date, start, end, type, status, term} = e;
@@ -37,8 +38,8 @@ export function visibleState(state, user) {
 }
 export async function bookingAction(store, user, action, data = {}, now = Date.now()) {
   if (action === 'state') return visibleState(await store.get('bookings', {type: 'json', consistency: 'strong'}) || initialState(), user);
-  if (!['book', 'cancel', 'approve', 'reject', 'room', 'import'].includes(action)) fail('ไม่รองรับคำสั่งนี้');
-  if (['approve', 'reject', 'room', 'import'].includes(action) && !user.staff) fail('เฉพาะเจ้าหน้าที่เท่านั้น', 403);
+  if (!['book', 'cancel', 'approve', 'reject', 'room', 'room_update', 'room_delete', 'import'].includes(action)) fail('ไม่รองรับคำสั่งนี้');
+  if (['approve', 'reject', 'room', 'room_update', 'room_delete', 'import'].includes(action) && !user.staff) fail('เฉพาะเจ้าหน้าที่เท่านั้น', 403);
   const requestId = text(data.requestId, 80);
   return update(store, 'bookings', initialState, state => {
     const receipt = state.receipts.find(r => r.id === requestId && r.actor === user.id);
@@ -52,7 +53,7 @@ export async function bookingAction(store, user, action, data = {}, now = Date.n
         fail('หมายเลขคำขอซ้ำ', 409);
       }
       if (!user.staff && state.events.filter(e => e.ownerId === user.id && e.status === 'pending').length >= 5) fail('มีคำขอรออนุมัติครบ 5 รายการแล้ว');
-      const event = eventFields(data, state.rooms, now);
+      const event = eventFields(data, state.rooms.filter(r => !r.archived), now);
       const room = state.rooms.find(r => r.id === event.room);
       if (!Number.isInteger(data.count) || data.count < 1 || data.count > room.capacity) fail('จำนวนผู้เข้าร่วมเกินความจุห้อง');
       Object.assign(event, {id: target, ownerId: user.id, owner: text(data.owner, 100), count: data.count,
@@ -68,11 +69,25 @@ export async function bookingAction(store, user, action, data = {}, now = Date.n
       if (action !== 'cancel' && event.status !== 'pending') fail('รายการนี้ได้รับการพิจารณาแล้ว');
       if (action === 'approve') event.status = 'approved';
       else { event.reason = (action === 'reject' ? 'ไม่อนุมัติ: ' : '') + text(data.reason, 500); event.status = 'cancelled'; }
-    } else if (action === 'room') {
+    } else if (action === 'room_delete') {
+      const room = state.rooms.find(r => r.id === data.id && !r.archived);
+      if (!room) fail('ไม่พบห้อง', 404);
+      const active = state.events.some(e => e.room === room.id && e.status !== 'cancelled' && Date.parse(`${e.date}T${e.end}:00+07:00`) > now);
+      if (active) fail('ห้องนี้มีรายการจองหรือตารางเรียนที่ยังใช้งานอยู่ กรุณาจัดการรายการก่อนลบ');
+      room.archived = true;
+    } else if (action === 'room' || action === 'room_update') {
       const room = {id: text(data.id, 30), name: text(data.name, 100), capacity: data.capacity, equipment: text(data.equipment || '', 180, false)};
       if (!/^[A-Za-z0-9_-]+$/.test(room.id) || !Number.isInteger(room.capacity) || room.capacity < 1 || room.capacity > 500) fail('รหัสห้องหรือความจุห้องไม่ถูกต้อง');
-      if (state.rooms.some(r => r.id.toLowerCase() === room.id.toLowerCase())) fail('รหัสห้องซ้ำ');
-      state.rooms.push(room);
+      if (action === 'room_update') {
+        const existing = state.rooms.find(r => r.id === room.id && !r.archived);
+        if (!existing) fail('ไม่พบห้อง', 404);
+        const oversized = state.events.some(e => e.room === room.id && e.status !== 'cancelled' && e.count > room.capacity && Date.parse(`${e.date}T${e.end}:00+07:00`) > now);
+        if (oversized) fail('จำนวนที่นั่งต่ำกว่าจำนวนผู้เข้าร่วมในรายการที่ยังใช้งานอยู่');
+        Object.assign(existing, room);
+      } else {
+        if (state.rooms.some(r => r.id.toLowerCase() === room.id.toLowerCase())) fail('รหัสห้องเคยถูกใช้แล้ว กรุณาใช้รหัสใหม่');
+        state.rooms.push(room);
+      }
     } else {
       const term = text(data.term, 40);
       if (!Array.isArray(data.events) || !data.events.length || data.events.length > 10000) fail('นำเข้าได้ 1–10000 คาบ');
@@ -80,7 +95,7 @@ export async function bookingAction(store, user, action, data = {}, now = Date.n
         if (e.type === 'class' && e.term === term && e.status !== 'cancelled') { e.status = 'cancelled'; e.reason = 'แทนที่ด้วยตารางเรียนชุดใหม่'; }
       }
       for (const row of data.events) {
-        const event = {...eventFields(row, state.rooms, now), id: randomUUID(), type: 'class', status: 'approved', term,
+        const event = {...eventFields(row, state.rooms.filter(r => !r.archived), now), id: randomUUID(), type: 'class', status: 'approved', term,
           ownerId: user.id, owner: 'เจ้าหน้าที่', created: new Date(now).toISOString()};
         noConflict(event, state.events);
         state.events.push(event);

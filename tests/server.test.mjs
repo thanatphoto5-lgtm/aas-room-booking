@@ -92,3 +92,56 @@ test('HTTP login only needs password; cookies signed; password rotation, CSRF an
   assert.equal((await call('room', {staff: true}, guestCookie)).status, 403);
   assert.match((await call('logout', {}, guestCookie)).headers.get('set-cookie'), /Max-Age=0/);
 });
+test('room edit retains bookings; archive blocks active bookings and keeps history', async () => {
+ const store = new MemoryStore();
+ const data = booking();
+ await bookingAction(store, guest, 'book', data);
+ const changes = {requestId: randomUUID(), id: 'MTR2', name: 'ห้องประชุมใหม่', capacity: 35, equipment: 'จอภาพ'};
+ await assert.rejects(bookingAction(store, guest, 'room_update', changes), /เจ้าหน้าที่/);
+ await assert.rejects(bookingAction(store, guest, 'room_delete', changes), /เจ้าหน้าที่/);
+ await bookingAction(store, staff, 'room_update', changes);
+ assert.equal((await store.get('bookings')).events[0].id, data.id);
+ assert.equal((await store.get('bookings')).rooms[0].name, changes.name);
+ await assert.rejects(bookingAction(store, staff, 'room_update', {...changes, requestId: randomUUID(), capacity: 1}), /จำนวนที่นั่ง/);
+ await assert.rejects(bookingAction(store, staff, 'room_delete', {...changes, requestId: randomUUID()}), /ยังใช้งานอยู่/);
+ await bookingAction(store, guest, 'cancel', {id: data.id, requestId: randomUUID(), reason: 'ยกเลิก'});
+ await bookingAction(store, staff, 'room_delete', {...changes, requestId: randomUUID()});
+ const state = await bookingAction(store, staff, 'state');
+ assert.equal(state.rooms.some(r => r.id === 'MTR2'), false);
+ assert.equal(state.archivedRooms[0].name, changes.name);
+ assert.equal(state.events.length, 1);
+ await assert.rejects(bookingAction(store, guest, 'book', booking()), /ไม่พบห้อง/);
+ await assert.rejects(bookingAction(store, staff, 'room', {...changes, requestId: randomUUID()}), /เคยถูกใช้/);
+});
+test('logout revokes staff and guest tokens across function instances; failed revocation fails closed', async () => {
+ const store = new MemoryStore();
+ const env = {STAFF_PASSWORD: 'logout-regression-test'};
+ const call = async (action, cookie = '', data = {}, backend = store) => createHandler(() => backend, env)(new Request('https://test.netlify.app/.netlify/functions/booking', {
+  method: 'POST', headers: {origin: 'https://test.netlify.app', 'content-type': 'application/json', cookie}, body: JSON.stringify({action, data})
+ }), {ip: 'logout-test'});
+ const cookieOf = response => response.headers.get('set-cookie').split(';')[0];
+ for (const action of ['login', 'guest']) {
+  const cookie = cookieOf(await call(action, '', {password: env.STAFF_PASSWORD}));
+  assert.equal((await call('state', cookie)).status, 200);
+  assert.equal((await call('logout', cookie)).status, 200);
+  assert.equal((await call('state', cookie)).status, 401);
+  assert.equal((await call('room', cookie, {requestId: randomUUID(), id: 'X', name: 'X', capacity: 5})).status, 401);
+  assert.equal((await call('logout', cookie)).status, 200);
+ }
+ const current = cookieOf(await call('login', '', {password: env.STAFF_PASSWORD}));
+ const replacement = cookieOf(await call('login', current, {password: env.STAFF_PASSWORD}));
+ assert.equal((await call('state', current)).status, 401);
+ assert.equal((await call('state', replacement)).status, 200);
+ const broken = {
+  get: store.get.bind(store), getWithMetadata: store.getWithMetadata.bind(store),
+  setJSON: async (key, data, options) => {
+   if (key.startsWith('revoked-')) throw new Error('simulated storage outage');
+   return store.setJSON(key, data, options);
+  }
+ };
+ const failure = await call('logout', replacement, {}, broken);
+ assert.equal(failure.status, 500);
+ assert.equal(failure.headers.has('set-cookie'), false);
+ assert.equal((await call('logout', replacement)).status, 200);
+ assert.equal((await call('state', replacement)).status, 401);
+});

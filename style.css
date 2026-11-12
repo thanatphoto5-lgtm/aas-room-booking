@@ -23,3 +23,44 @@ body{background:#faf9fd;color:var(--ink)}.sidebar{padding:14px 24px;flex-wrap:wr
 .login-page{min-height:100vh;background:linear-gradient(145deg,#f1edf9,#fff 65%,#edf8fb)}.login-shell{max-width:650px;padding:55px 24px;margin:auto}.login-logo{width:100%;height:auto;margin-bottom:30px}.login-card{padding:32px}.login-card a{color:#6b63ad}.login-card #loginMessage{margin:18px 0;color:#8f4438;overflow-wrap:anywhere}.role-label{color:#6b63ad;font-weight:bold}.demo-banner{align-items:center;justify-content:space-between;background:#f4f1fb;border-color:#e5ddf3}.demo-banner button{padding:3px 9px;white-space:nowrap}.access-gate{display:none;max-width:700px;margin:12vh auto;padding:30px}.auth-loading>.sidebar,.auth-loading>.workspace{display:none}.auth-loading>.access-gate{display:block}
 
 .reports-menu{position:relative;color:#514988;white-space:nowrap}.reports-menu summary{cursor:pointer;padding:.6rem;font-weight:bold}.reports-menu div{position:absolute;right:0;min-width:170px;background:white;border:1px solid #ded6ef;border-radius:8px;z-index:10}.reports-menu a{display:block;padding:.65rem;color:#514988;text-decoration:none}
+
+/* Shared status palette for calendar entries and their legend. */
+:root {
+ --status-approved: #6b63ad;
+ --status-pending: #936415;
+ --status-class: #33798c;
+ --status-empty: #cfd3d6;
+}
+.sidebar .brand { width: 300px; max-width: 100%; }
+.sidebar .system-title {
+ flex: 1 1 350px;
+ text-align: center;
+ color: #514988;
+ font-size: clamp(16px, 1.3vw, 23px);
+ font-weight: 700;
+ line-height: 1.5;
+}
+.sidebar nav { flex: 0 1 auto; }
+.event.approved .event-status { background: var(--status-approved); }
+.event.pending .event-status { background: var(--status-pending); }
+.event.class .event-status { background: var(--status-class); }
+.status-line.vacant { --line-left: var(--status-empty); --line-right: var(--status-empty); }
+.status-line.waiting { --line-left: var(--status-pending); --line-right: var(--status-pending); }
+.status-line.confirmed { --line-left: var(--status-approved); --line-right: var(--status-approved); }
+.status-line.mixed { --line-left: var(--status-approved); --line-right: var(--status-pending); }
+.status-line.learning { --line-left: var(--status-class); --line-right: var(--status-class); }
+.status-line.vacant,.status-line.waiting,.status-line.confirmed,.status-line.mixed,.status-line.learning {
+ background: linear-gradient(to right,var(--line-left) 0 45%,transparent 45% 55%,var(--line-right) 55%);
+}
+.month-cell .month-event.approved { background: #eee8fa; color: var(--status-approved); border-left: 4px solid var(--status-approved); }
+.month-cell .month-event.pending { background: #fff3d9; color: var(--status-pending); border-left: 4px solid var(--status-pending); }
+.month-cell .month-event.class { background: #e4f5fa; color: var(--status-class); border-left: 4px solid var(--status-class); }
+@media(max-width:1100px) {
+ .sidebar .brand { width: 260px; }
+ .sidebar .system-title { flex-basis: 300px; }
+ .sidebar nav { width: 100%; }
+}
+@media(max-width:700px) {
+ .sidebar .brand { width: 240px; margin: 0 auto; }
+ .sidebar .system-title { margin-top: 10px; font-size: 17px; }
+}
